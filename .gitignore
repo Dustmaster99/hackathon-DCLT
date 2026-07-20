@@ -1,0 +1,23 @@
+# Environment files and secrets
+.env
+.env.*
+!.env-exemplo
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Go
+*.exe
+*.test
+*.out
+coverage.*
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,43 @@
+flowchart LR
+    root["hackathon-DCLT/"]
+
+    root --> config["Arquivos da raiz"]
+    config --> compose["compose.yaml"]
+    config --> env[".env / .env-exemplo"]
+    config --> gitignore[".gitignore"]
+    config --> readme["README.md"]
+
+    root --> scripts["scripts/"]
+    scripts --> start["start-environment.ps1"]
+
+    root --> postgres["postgres/"]
+    postgres --> initdb["init-databases.sh"]
+
+    root --> services["Microserviços"]
+    services --> ngo["ngo-service/"]
+    ngo --> ngoApp["app.py"]
+    ngo --> ngoReq["requirements.txt"]
+    ngo --> ngoDocker["Dockerfile + .dockerignore"]
+    ngo --> ngoDb["db/init.sql"]
+
+    services --> donation["donation-service/"]
+    donation --> donationApp["main.go"]
+    donation --> donationDeps["go.mod + go.sum"]
+    donation --> donationDocker["Dockerfile + .dockerignore"]
+    donation --> donationDb["db/init.sql"]
+
+    services --> volunteer["volunteer-service/"]
+    volunteer --> volunteerApp["app.py"]
+    volunteer --> volunteerReq["requirements.txt"]
+    volunteer --> volunteerDocker["Dockerfile + .dockerignore"]
+
+    root --> diagrams["esquematicos/"]
+    diagrams --> flow["fluxo-start-environment.mmd + .png"]
+    diagrams --> tree["estrutura-projeto.mmd + .png"]
+
+    classDef rootNode fill:#dbeafe,stroke:#2563eb,color:#172554
+    classDef folder fill:#ede9fe,stroke:#7c3aed,color:#2e1065
+    classDef runtime fill:#dcfce7,stroke:#16a34a,color:#052e16
+    class root rootNode
+    class config,scripts,postgres,services,ngo,donation,volunteer,diagrams folder
+    class compose,env runtime

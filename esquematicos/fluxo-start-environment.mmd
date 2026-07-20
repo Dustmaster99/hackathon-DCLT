@@ -1,0 +1,34 @@
+flowchart TD
+    inicio([Início]) --> parametros[Receber parâmetros do script]
+    parametros --> env[Carregar arquivo .env]
+    env --> validarEnv{Variáveis obrigatórias válidas?}
+    validarEnv -- Não --> erro([Interromper e exibir erro])
+    validarEnv -- Sim --> token{Access key temporária ASIA?}
+    token -- Sim --> validarToken{Session token válido?}
+    validarToken -- Não --> erro
+    validarToken -- Sim --> aws
+    token -- Não --> aws[Validar identidade com AWS STS]
+
+    aws --> sqs[Validar acesso à fila SQS]
+    sqs --> dynamo[Validar tabela DynamoDB ativa]
+    dynamo --> docker[Validar Docker Engine]
+    docker --> compose[Validar Docker Compose e compose.yaml]
+    compose --> build[Build das três imagens]
+
+    build --> ngo[ngo-service]
+    build --> donation[donation-service]
+    build --> volunteer[volunteer-service]
+    ngo --> tags[Aplicar tags para registry]
+    donation --> tags
+    volunteer --> tags
+
+    tags --> subir[docker compose up -d]
+    subir --> status[docker compose ps]
+    status --> fim([Ambiente iniciado])
+
+    classDef terminal fill:#dbeafe,stroke:#2563eb,color:#172554
+    classDef decision fill:#fef3c7,stroke:#d97706,color:#451a03
+    classDef failure fill:#fee2e2,stroke:#dc2626,color:#450a0a
+    class inicio,fim terminal
+    class validarEnv,token,validarToken decision
+    class erro failure
