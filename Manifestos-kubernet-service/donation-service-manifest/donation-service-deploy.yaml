@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: donation-service
+  namespace: fiap-microservices
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: donation-service
+  template:
+    metadata:
+      labels:
+        app: donation-service
+    spec:
+      containers:
+        - name: donation-service
+          image: 245177908729.dkr.ecr.us-east-1.amazonaws.com/solidarytech/donation-service:latest
+          ports:
+            - containerPort: 8082
+          envFrom:
+            - secretRef:
+                name: donation-secret
+            - secretRef:
+                name: aws-credentials
+          env:
+            - name: PORT
+              value: "8082"
+            - name: OTEL_SERVICE_NAME
+              value: "donation-service"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.monitoring.svc.cluster.local:4318"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "http/protobuf"
+            - name: OTEL_TRACES_EXPORTER
+              value: "otlp"
+            - name: OTEL_METRICS_EXPORTER
+              value: "otlp"
+            - name: SERVICE_VERSION
+              value: "1.0.0"
+            - name: ENVIRONMENT
+              value: "fiap-lab5"
+          resources:
+            requests:
+              cpu: "10m"
+            limits:
+              cpu: "100m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: donation-service
+  namespace: fiap-microservices
+spec:
+  type: ClusterIP
+  selector:
+    app: donation-service
+  ports:
+    - port: 8082
+      targetPort: 8082

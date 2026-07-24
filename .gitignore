@@ -2,11 +2,41 @@
 .env
 .env.*
 !.env-exemplo
+*.tfvars
+*.tfvars.json
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfplan
+*.plan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Private keys, certificates, and Kubernetes credentials
+*.pem
+*.key
+*.p12
+*.pfx
+kubeconfig
+.kube/
 
 # Python
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
 .venv/
 venv/
 
