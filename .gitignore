@@ -7,6 +7,7 @@
 *.tfstate
 *.tfstate.*
 .terraform/
+terraforming-infraestructure/modules/**/.terraform.lock.hcl
 *.tfplan
 *.plan
 crash.log
