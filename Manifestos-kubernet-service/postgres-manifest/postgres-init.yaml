@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: fiap-microservices
+data:
+  01-create-databases.sh: |
+    #!/bin/sh
+    set -eu
+
+    psql \
+      --set ON_ERROR_STOP=1 \
+      --set ngo_db_name="$NGO_DB_NAME" \
+      --set donation_db_name="$DONATION_DB_NAME" \
+      --username "$POSTGRES_USER" \
+      --dbname "$POSTGRES_DB" <<'EOSQL'
+    SELECT format('CREATE DATABASE %I', :'ngo_db_name')
+    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = :'ngo_db_name')\gexec
+
+    SELECT format('CREATE DATABASE %I', :'donation_db_name')
+    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = :'donation_db_name')\gexec
+    EOSQL
+
+    psql \
+      --set ON_ERROR_STOP=1 \
+      --username "$POSTGRES_USER" \
+      --dbname "$NGO_DB_NAME" \
+      --file /docker-entrypoint-initdb.d/ngo-schema
+
+    psql \
+      --set ON_ERROR_STOP=1 \
+      --username "$POSTGRES_USER" \
+      --dbname "$DONATION_DB_NAME" \
+      --file /docker-entrypoint-initdb.d/donation-schema
+
+  ngo-schema: |
+    CREATE TABLE IF NOT EXISTS ngos (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(150) NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        cause VARCHAR(100) NOT NULL,
+        city VARCHAR(100) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+
+    INSERT INTO ngos (name, email, cause, city) VALUES
+    ('Anjos de Patas', 'contato@anjosdepatas.org', 'Protecao Animal', 'Osasco'),
+    ('Educa Mais', 'info@educamais.org', 'Educacao', 'Sao Paulo')
+    ON CONFLICT (email) DO NOTHING;
+
+  donation-schema: |
+    CREATE TABLE IF NOT EXISTS donations (
+        id SERIAL PRIMARY KEY,
+        ngo_id INT NOT NULL,
+        amount NUMERIC(10, 2) NOT NULL,
+        donor_name VARCHAR(100) NOT NULL,
+        status VARCHAR(20) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
