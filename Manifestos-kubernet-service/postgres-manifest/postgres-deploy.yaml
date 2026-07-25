@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: postgres
-          image: 245177908729.dkr.ecr.us-east-1.amazonaws.com/solidarytech/postgres:latest
+          image: 245177908729.dkr.ecr.us-east-1.amazonaws.com/solidarytech/postgres:16-alpine
           ports:
             - containerPort: 5432
           readinessProbe:
