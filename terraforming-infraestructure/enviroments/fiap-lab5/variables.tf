@@ -47,6 +47,12 @@ variable "eks_node_role_arn" {
   }
 }
 
+variable "enable_ebs_persistence" {
+  description = "Habilita o EBS CSI, a role IAM associada e os volumes persistentes da observabilidade."
+  type        = bool
+  default     = false
+}
+
 variable "project_name" {
   description = "Nome do projeto usado na identificacao e nas tags dos recursos."
   type        = string

@@ -5,6 +5,8 @@ resource "kubernetes_namespace_v1" "monitoring" {
 }
 
 resource "kubernetes_storage_class_v1" "gp3" {
+  count = var.persistence_enabled ? 1 : 0
+
   metadata {
     name = var.storage_class_name
   }
@@ -21,6 +23,8 @@ resource "kubernetes_storage_class_v1" "gp3" {
 }
 
 resource "kubernetes_persistent_volume_claim_v1" "otel_collector" {
+  count = var.persistence_enabled ? 1 : 0
+
   metadata {
     name      = "${var.otel_collector_release_name}-data"
     namespace = kubernetes_namespace_v1.monitoring.metadata[0].name
@@ -28,7 +32,7 @@ resource "kubernetes_persistent_volume_claim_v1" "otel_collector" {
 
   spec {
     access_modes       = ["ReadWriteOnce"]
-    storage_class_name = kubernetes_storage_class_v1.gp3.metadata[0].name
+    storage_class_name = kubernetes_storage_class_v1.gp3[0].metadata[0].name
 
     resources {
       requests = {
@@ -84,8 +88,8 @@ resource "helm_release" "loki" {
       singleBinary = {
         replicas = 1
         persistence = {
-          enabled      = true
-          storageClass = kubernetes_storage_class_v1.gp3.metadata[0].name
+          enabled      = var.persistence_enabled
+          storageClass = var.persistence_enabled ? kubernetes_storage_class_v1.gp3[0].metadata[0].name : null
           size         = var.loki_persistence_size
           accessModes  = ["ReadWriteOnce"]
           whenDeleted  = "Retain"
@@ -168,10 +172,10 @@ resource "helm_release" "prometheus" {
             }
           }
 
-          storageSpec = {
+          storageSpec = var.persistence_enabled ? {
             volumeClaimTemplate = {
               spec = {
-                storageClassName = kubernetes_storage_class_v1.gp3.metadata[0].name
+                storageClassName = kubernetes_storage_class_v1.gp3[0].metadata[0].name
                 accessModes      = ["ReadWriteOnce"]
                 resources = {
                   requests = {
@@ -180,7 +184,7 @@ resource "helm_release" "prometheus" {
                 }
               }
             }
-          }
+          } : null
         }
       }
 
@@ -219,10 +223,10 @@ resource "helm_release" "grafana" {
       }
 
       persistence = {
-        enabled          = var.grafana_persistence_enabled
+        enabled          = var.persistence_enabled && var.grafana_persistence_enabled
         type             = "pvc"
         size             = var.grafana_persistence_size
-        storageClassName = kubernetes_storage_class_v1.gp3.metadata[0].name
+        storageClassName = var.persistence_enabled ? kubernetes_storage_class_v1.gp3[0].metadata[0].name : null
         accessModes      = ["ReadWriteOnce"]
       }
 
@@ -332,31 +336,32 @@ resource "helm_release" "otel_collector" {
         }
       }
 
-      extraVolumes = [
+      extraVolumes = var.persistence_enabled ? [
         {
           name = "otel-storage"
           persistentVolumeClaim = {
-            claimName = kubernetes_persistent_volume_claim_v1.otel_collector.metadata[0].name
+            claimName = kubernetes_persistent_volume_claim_v1.otel_collector[0].metadata[0].name
           }
         }
-      ]
+      ] : []
 
-      extraVolumeMounts = [
+      extraVolumeMounts = var.persistence_enabled ? [
         {
           name      = "otel-storage"
           mountPath = "/var/lib/otelcol"
         }
-      ]
+      ] : []
 
       config = {
-        extensions = {
-          file_storage = {
-            directory = "/var/lib/otelcol"
-          }
+        extensions = merge({
           health_check = {
             endpoint = "0.0.0.0:13133"
           }
-        }
+          }, var.persistence_enabled ? {
+          file_storage = {
+            directory = "/var/lib/otelcol"
+          }
+        } : {})
 
         receivers = {
           otlp = {
@@ -383,11 +388,12 @@ resource "helm_release" "otel_collector" {
         exporters = {
           "otlphttp/loki" = {
             endpoint = "http://${var.loki_release_name}-gateway.${var.namespace}.svc.cluster.local/otlp"
-            sending_queue = {
+            sending_queue = merge({
               enabled    = true
-              storage    = "file_storage"
               queue_size = 5000
-            }
+              }, var.persistence_enabled ? {
+              storage = "file_storage"
+            } : {})
           }
           prometheus = {
             endpoint = "0.0.0.0:8889"
@@ -398,7 +404,7 @@ resource "helm_release" "otel_collector" {
         }
 
         service = {
-          extensions = ["health_check", "file_storage"]
+          extensions = var.persistence_enabled ? ["health_check", "file_storage"] : ["health_check"]
 
           pipelines = {
             logs = {

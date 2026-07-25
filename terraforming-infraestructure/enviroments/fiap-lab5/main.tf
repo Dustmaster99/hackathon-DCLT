@@ -25,6 +25,8 @@ data "aws_iam_policy_document" "ebs_csi_assume_role" {
 }
 
 resource "aws_iam_role" "ebs_csi" {
+  count = var.enable_ebs_persistence ? 1 : 0
+
   name               = "${var.project_name}-ebs-csi"
   assume_role_policy = data.aws_iam_policy_document.ebs_csi_assume_role.json
 
@@ -32,7 +34,9 @@ resource "aws_iam_role" "ebs_csi" {
 }
 
 resource "aws_iam_role_policy_attachment" "ebs_csi" {
-  role       = aws_iam_role.ebs_csi.name
+  count = var.enable_ebs_persistence ? 1 : 0
+
+  role       = aws_iam_role.ebs_csi[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
 }
 
@@ -88,21 +92,22 @@ module "eks" {
 
   max_unavailable = 1
 
-  cluster_addons = {
+  cluster_addons = merge({
     coredns                   = null
     kube-proxy                = null
     vpc-cni                   = null
-    eks-pod-identity-agent    = null
     eks-node-monitoring-agent = null
-    aws-ebs-csi-driver        = null
-  }
+    }, var.enable_ebs_persistence ? {
+    eks-pod-identity-agent = null
+    aws-ebs-csi-driver     = null
+  } : {})
 
-  addon_pod_identity_associations = {
+  addon_pod_identity_associations = var.enable_ebs_persistence ? {
     aws-ebs-csi-driver = {
-      role_arn        = aws_iam_role.ebs_csi.arn
+      role_arn        = aws_iam_role.ebs_csi[0].arn
       service_account = "ebs-csi-controller-sa"
     }
-  }
+  } : {}
 
   tags = {
     Project     = "SolidaryTech"
@@ -216,9 +221,10 @@ module "argocd_applications" {
 module "observability" {
   source = "../../modules/observability"
 
-  namespace          = "monitoring"
-  public_subnet_ids  = module.vpc.public_subnet_ids
-  storage_class_name = "solidarytech-gp3"
+  namespace           = "monitoring"
+  public_subnet_ids   = module.vpc.public_subnet_ids
+  storage_class_name  = "solidarytech-gp3"
+  persistence_enabled = var.enable_ebs_persistence
 
   grafana_release_name        = "grafana"
   grafana_chart_version       = "12.7.2"

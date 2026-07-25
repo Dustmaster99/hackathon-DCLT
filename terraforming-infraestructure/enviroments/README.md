@@ -50,6 +50,9 @@ Revise também:
 eks_cluster_version  = "1.35"
 eks_cluster_role_arn = "arn:aws:iam::<account-id>:role/<cluster-role>"
 eks_node_role_arn    = "arn:aws:iam::<account-id>:role/<node-role>"
+
+# Mantenha false no AWS Academy quando não for permitido criar roles IAM.
+enable_ebs_persistence = false
 ```
 
 Nunca envie `terraform.tfvars`, `.env`, states ou credenciais ao Git.
@@ -198,22 +201,19 @@ terraform plan -target="module.donation_events_sqs"
 terraform apply -target="module.donation_events_sqs"
 ```
 
-### 5. EKS, EBS CSI e Pod Identity
+### 5. EKS
 
-Esta etapa também cria a role IAM do EBS CSI Driver. O módulo EKS depende da
-VPC e da policy IAM, portanto o Terraform inclui essas dependências no plano.
+No AWS Academy, mantenha `enable_ebs_persistence = false`. Nesse modo, esta
+etapa não cria role IAM, EBS CSI Driver ou associação de Pod Identity.
 
 ```powershell
-terraform plan `
-  -target="aws_iam_role.ebs_csi" `
-  -target="aws_iam_role_policy_attachment.ebs_csi" `
-  -target="module.eks"
-
-terraform apply `
-  -target="aws_iam_role.ebs_csi" `
-  -target="aws_iam_role_policy_attachment.ebs_csi" `
-  -target="module.eks"
+terraform plan -target="module.eks"
+terraform apply -target="module.eks"
 ```
+
+Fora do AWS Academy, definir `enable_ebs_persistence = true` também cria a
+role IAM do EBS CSI Driver, anexa `AmazonEBSCSIDriverPolicy` e configura Pod
+Identity.
 
 Confirme o acesso ao cluster:
 
@@ -241,8 +241,10 @@ terraform apply -target="module.cluster_manifests"
 
 ### 7. Observabilidade
 
-Cria Grafana, Loki, Prometheus, OTel Collector, StorageClass `gp3`, PVCs e o
-Load Balancer exclusivo do Grafana:
+Cria Grafana, Loki, Prometheus, OTel Collector e o Load Balancer exclusivo do
+Grafana. Com `enable_ebs_persistence = false`, os dados ficam efêmeros e são
+perdidos quando os Pods são recriados. Com a opção habilitada, também cria a
+StorageClass `gp3` e os PVCs:
 
 ```powershell
 terraform plan -target="module.observability"

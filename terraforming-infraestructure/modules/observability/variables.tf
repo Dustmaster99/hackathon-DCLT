@@ -20,6 +20,12 @@ variable "storage_class_name" {
   default     = "solidarytech-gp3"
 }
 
+variable "persistence_enabled" {
+  description = "Habilita StorageClass e volumes persistentes EBS para a stack de observabilidade."
+  type        = bool
+  default     = true
+}
+
 variable "grafana_release_name" {
   description = "Nome da release Helm do Grafana."
   type        = string

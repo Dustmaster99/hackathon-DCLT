@@ -39,6 +39,11 @@ provider "kubernetes" {
 }
 
 provider "helm" {
+  # Isola o Terraform de configuracoes/cache globais do Helm no Windows.
+  # Isso evita repositorios obsoletos ou arquivos sem permissao em AppData.
+  repository_config_path = "${path.root}/.terraform/helm/repositories.yaml"
+  repository_cache       = "${path.root}/.terraform/helm/repository"
+
   kubernetes {
     host                   = module.eks.cluster_endpoint
     cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)

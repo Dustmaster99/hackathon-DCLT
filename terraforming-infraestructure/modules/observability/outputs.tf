@@ -5,12 +5,12 @@ output "namespace" {
 
 output "storage_class_name" {
   description = "StorageClass gp3 usada pelos componentes de observabilidade."
-  value       = kubernetes_storage_class_v1.gp3.metadata[0].name
+  value       = try(kubernetes_storage_class_v1.gp3[0].metadata[0].name, null)
 }
 
 output "otel_collector_pvc_name" {
   description = "PVC usado pela fila persistente do OpenTelemetry Collector."
-  value       = kubernetes_persistent_volume_claim_v1.otel_collector.metadata[0].name
+  value       = try(kubernetes_persistent_volume_claim_v1.otel_collector[0].metadata[0].name, null)
 }
 
 output "grafana_service_name" {
