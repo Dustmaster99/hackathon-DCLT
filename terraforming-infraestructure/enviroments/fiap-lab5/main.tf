@@ -95,6 +95,7 @@ module "eks" {
   cluster_addons = merge({
     coredns                   = null
     kube-proxy                = null
+    metrics-server            = null
     vpc-cni                   = null
     eks-node-monitoring-agent = null
     }, var.enable_ebs_persistence ? {

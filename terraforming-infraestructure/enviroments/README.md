@@ -204,7 +204,9 @@ terraform apply -target="module.donation_events_sqs"
 ### 5. EKS
 
 No AWS Academy, mantenha `enable_ebs_persistence = false`. Nesse modo, esta
-etapa não cria role IAM, EBS CSI Driver ou associação de Pod Identity.
+etapa não cria role IAM, EBS CSI Driver ou associação de Pod Identity. O
+Metrics Server é instalado automaticamente como add-on comunitário do EKS,
+sem precisar de role IAM adicional, e disponibiliza métricas para os HPAs.
 
 ```powershell
 terraform plan -target="module.eks"
