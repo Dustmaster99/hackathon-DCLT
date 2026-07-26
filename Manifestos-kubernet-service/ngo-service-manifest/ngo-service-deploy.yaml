@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: ngo-service
-          image: 245177908729.dkr.ecr.us-east-1.amazonaws.com/solidarytech/ngo-service:244e2cb
+          image: 245177908729.dkr.ecr.us-east-1.amazonaws.com/solidarytech/ngo-service:b423abb
           ports:
             - containerPort: 8081
           envFrom:
