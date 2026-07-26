@@ -42,9 +42,11 @@ spec:
               value: "fiap-lab5"
           resources:
             requests:
-              cpu: "10m"
+              cpu: "15m"
+              memory: "96Mi"
             limits:
               cpu: "100m"
+              memory: "192Mi"
 ---
 apiVersion: v1
 kind: Service
