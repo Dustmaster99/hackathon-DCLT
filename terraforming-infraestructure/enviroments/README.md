@@ -253,7 +253,55 @@ terraform plan -target="module.observability"
 terraform apply -target="module.observability"
 ```
 
-### 8. Argo CD
+### 8. Cluster Autoscaler
+
+Instala o Cluster Autoscaler no namespace `kube-system`, cria uma role IAM com
+permissões mínimas, associa a role ao ServiceAccount por EKS Pod Identity e
+habilita a coleta das métricas pelo Prometheus.
+
+Esta etapa deve ocorrer depois da observabilidade porque o chart cria um
+`ServiceMonitor`, cujo CRD é instalado pelo `kube-prometheus-stack`.
+
+O node group está configurado com:
+
+```text
+min_size     = 1
+desired_size = 1
+max_size     = 4
+```
+
+Gere e revise um plano salvo:
+
+```powershell
+terraform plan `
+  -target="module.cluster_autoscaler" `
+  -out="cluster-autoscaler.tfplan"
+
+terraform show "cluster-autoscaler.tfplan"
+terraform apply "cluster-autoscaler.tfplan"
+```
+
+O target possui dependência explícita do EKS e da observabilidade. Se o plano
+mostrar substituição do node group:
+
+```text
+-/+ module.eks.aws_eks_node_group.main
+```
+
+não aplique automaticamente. Como o ambiente começa com apenas um worker, a
+substituição deve ser planejada como migração blue-green para evitar
+indisponibilidade.
+
+Confirme a instalação:
+
+```powershell
+kubectl get deployment cluster-autoscaler -n kube-system
+kubectl get pods -n kube-system `
+  -l app.kubernetes.io/name=aws-cluster-autoscaler
+kubectl logs -n kube-system deployment/cluster-autoscaler --tail=100
+```
+
+### 9. Argo CD
 
 Instala os CRDs e componentes do Argo CD e cria seu Load Balancer exclusivo:
 
@@ -269,7 +317,7 @@ kubectl get crd applications.argoproj.io
 kubectl get pods -n argocd
 ```
 
-### 9. Argo CD Applications
+### 10. Argo CD Applications
 
 Depois da instalação do CRD:
 
@@ -281,7 +329,7 @@ terraform apply -target="module.argocd_applications"
 O Argo CD passa a sincronizar os Deployments, Services e HPAs presentes em
 `Manifestos-kubernet-service`.
 
-### 10. Reconciliação completa
+### 11. Reconciliação completa
 
 Finalize obrigatoriamente sem `-target`:
 
@@ -307,7 +355,7 @@ terraform apply `
 ```
 
 Após o bootstrap do cluster, Argo CD e observabilidade também podem ser
-planejados juntos:
+planejados juntos. O Cluster Autoscaler deve ser aplicado depois desse grupo:
 
 ```powershell
 terraform plan `
@@ -317,6 +365,11 @@ terraform plan `
 terraform apply `
   -target="module.observability" `
   -target="module.argocd"
+```
+
+```powershell
+terraform plan -target="module.cluster_autoscaler"
+terraform apply -target="module.cluster_autoscaler"
 ```
 
 Crie `module.argocd_applications` somente depois que o CRD do Argo CD estiver
@@ -333,6 +386,7 @@ kubectl get services -A
 kubectl get ingress -A
 kubectl get pvc -n monitoring
 kubectl get applications -n argocd
+kubectl get deployment cluster-autoscaler -n kube-system
 ```
 
 URLs externas:

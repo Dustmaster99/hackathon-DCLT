@@ -269,12 +269,8 @@ Provisionar:
 
 ## 💰 FinOps
 
-Implementar:
-
-- Tags estruturadas
-- Controle de custos
-- Rightsizing
-- Budgets e alertas financeiros
+A estratégia de tagging, o plano de rightsizing, os testes de comprovação e o
+forecast mensal da arquitetura estão documentados em [finops.md](finops.md).
 
 ---
 
