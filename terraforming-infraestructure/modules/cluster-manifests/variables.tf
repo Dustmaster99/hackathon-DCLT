@@ -21,6 +21,11 @@ variable "public_subnet_ids" {
   type        = list(string)
 }
 
+variable "aws_resource_tags" {
+  description = "Tags aplicadas aos recursos AWS criados indiretamente pelos manifestos Kubernetes."
+  type        = map(string)
+}
+
 variable "aws_region" {
   description = "Regiao AWS usada pelos microservicos."
   type        = string

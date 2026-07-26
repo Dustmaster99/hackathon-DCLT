@@ -16,10 +16,16 @@ resource "kubernetes_storage_class_v1" "gp3" {
   volume_binding_mode    = "WaitForFirstConsumer"
   allow_volume_expansion = true
 
-  parameters = {
-    type      = "gp3"
-    encrypted = "true"
-  }
+  parameters = merge(
+    {
+      type      = "gp3"
+      encrypted = "true"
+    },
+    {
+      for index, key in sort(keys(var.aws_resource_tags)) :
+      "tagSpecification_${index + 1}" => "${key}=${var.aws_resource_tags[key]}"
+    }
+  )
 }
 
 resource "kubernetes_persistent_volume_claim_v1" "otel_collector" {
@@ -219,6 +225,9 @@ resource "helm_release" "grafana" {
           "service.beta.kubernetes.io/aws-load-balancer-scheme"  = var.load_balancer_scheme
           "service.beta.kubernetes.io/aws-load-balancer-type"    = "nlb"
           "service.beta.kubernetes.io/aws-load-balancer-subnets" = join(",", var.public_subnet_ids)
+          "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags" = join(",", [
+            for key in sort(keys(var.aws_resource_tags)) : "${key}=${var.aws_resource_tags[key]}"
+          ])
         }
       }
 

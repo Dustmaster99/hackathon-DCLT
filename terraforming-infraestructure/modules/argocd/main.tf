@@ -39,6 +39,9 @@ resource "helm_release" "argocd" {
             "service.beta.kubernetes.io/aws-load-balancer-scheme"  = var.load_balancer_scheme
             "service.beta.kubernetes.io/aws-load-balancer-type"    = "nlb"
             "service.beta.kubernetes.io/aws-load-balancer-subnets" = join(",", var.public_subnet_ids)
+            "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags" = join(",", [
+              for key in sort(keys(var.aws_resource_tags)) : "${key}=${var.aws_resource_tags[key]}"
+            ])
           } : {}
         }
         resources = {

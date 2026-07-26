@@ -14,6 +14,11 @@ variable "public_subnet_ids" {
   }
 }
 
+variable "aws_resource_tags" {
+  description = "Tags aplicadas aos recursos AWS criados indiretamente pela stack de observabilidade."
+  type        = map(string)
+}
+
 variable "storage_class_name" {
   description = "Nome da StorageClass gp3 gerenciada pelo modulo."
   type        = string

@@ -54,6 +54,11 @@ variable "load_balancer_scheme" {
   }
 }
 
+variable "aws_resource_tags" {
+  description = "Tags aplicadas ao Network Load Balancer criado pelo Service do Argo CD."
+  type        = map(string)
+}
+
 variable "timeout" {
   description = "Timeout da instalacao Helm em segundos."
   type        = number

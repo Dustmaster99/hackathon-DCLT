@@ -1,11 +1,12 @@
 locals {
   common_tags = merge(
+    var.additional_tags,
     {
-      Project     = var.project_name
-      Environment = var.environment
+      Project     = "SolidaryTech"
+      Environment = "Production"
+      CostCenter  = "NGO-Core"
       ManagedBy   = "Terraform"
-    },
-    var.additional_tags
+    }
   )
 }
 
@@ -63,11 +64,7 @@ module "vpc" {
 
   database_subnets = []
 
-  tags = {
-    Project     = "SolidaryTech"
-    Environment = "Development"
-    ManagedBy   = "Terraform"
-  }
+  tags = local.common_tags
 }
 
 module "eks" {
@@ -87,8 +84,8 @@ module "eks" {
   disk_size      = 20
 
   desired_size = 1
-  min_size     = 0
-  max_size     = 2
+  min_size     = 1
+  max_size     = 4
 
   max_unavailable = 1
 
@@ -110,13 +107,24 @@ module "eks" {
     }
   } : {}
 
-  tags = {
-    Project     = "SolidaryTech"
-    Environment = "Development"
-    ManagedBy   = "Terraform"
-  }
+  tags = local.common_tags
 
   depends_on = [aws_iam_role_policy_attachment.ebs_csi]
+}
+
+module "cluster_autoscaler" {
+  source = "../../modules/cluster-autoscaler"
+
+  cluster_name       = module.eks.cluster_name
+  aws_region         = var.aws_region
+  chart_version      = "9.58.0"
+  kubernetes_version = var.eks_cluster_version
+  tags               = local.common_tags
+
+  depends_on = [
+    module.eks,
+    module.observability
+  ]
 }
 
 module "ecr" {
@@ -134,11 +142,7 @@ module "ecr" {
   image_tag_mutability = "MUTABLE"
   scan_on_push         = true
 
-  tags = {
-    Project     = "SolidaryTech"
-    Environment = "Development"
-    ManagedBy   = "Terraform"
-  }
+  tags = local.common_tags
 }
 
 module "volunteers_dynamodb" {
@@ -149,11 +153,7 @@ module "volunteers_dynamodb" {
   hash_key      = "volunteer_id"
   hash_key_type = "S"
 
-  tags = {
-    Project     = "SolidaryTech"
-    Environment = "Development"
-    ManagedBy   = "Terraform"
-  }
+  tags = local.common_tags
 }
 
 module "donation_events_sqs" {
@@ -161,11 +161,7 @@ module "donation_events_sqs" {
 
   queue_name = "solidary-donations"
 
-  tags = {
-    Project     = "SolidaryTech"
-    Environment = "Development"
-    ManagedBy   = "Terraform"
-  }
+  tags = local.common_tags
 }
 
 module "cluster_manifests" {
@@ -175,6 +171,7 @@ module "cluster_manifests" {
   ingress_nginx_namespace      = "ingress-nginx"
   argocd_namespace             = "argocd"
   public_subnet_ids            = module.vpc.public_subnet_ids
+  aws_resource_tags            = local.common_tags
 
   aws_region = var.aws_region
 
@@ -201,6 +198,7 @@ module "argocd" {
   server_service_type  = "LoadBalancer"
   public_subnet_ids    = module.vpc.public_subnet_ids
   load_balancer_scheme = "internet-facing"
+  aws_resource_tags    = local.common_tags
 
   controller_replicas  = 1
   server_replicas      = 1
@@ -226,6 +224,7 @@ module "observability" {
   public_subnet_ids   = module.vpc.public_subnet_ids
   storage_class_name  = "solidarytech-gp3"
   persistence_enabled = var.enable_ebs_persistence
+  aws_resource_tags   = local.common_tags
 
   grafana_release_name        = "grafana"
   grafana_chart_version       = "12.7.2"
