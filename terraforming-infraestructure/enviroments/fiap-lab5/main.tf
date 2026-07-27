@@ -113,6 +113,7 @@ module "eks" {
 }
 
 module "cluster_autoscaler" {
+  count  = var.enable_cluster_autoscaler ? 1 : 0
   source = "../../modules/cluster-autoscaler"
 
   cluster_name       = module.eks.cluster_name
@@ -246,6 +247,10 @@ module "observability" {
   otel_collector_release_name     = "otel-collector"
   otel_collector_chart_version    = "0.158.2"
   otel_collector_persistence_size = "5Gi"
+
+  enable_datadog  = var.enable_datadog
+  datadog_site    = var.datadog_site
+  datadog_api_key = var.datadog_api_key
 
   depends_on = [module.cluster_manifests]
 }

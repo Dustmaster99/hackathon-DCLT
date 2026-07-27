@@ -4,6 +4,28 @@ resource "kubernetes_namespace_v1" "monitoring" {
   }
 }
 
+resource "kubernetes_secret_v1" "datadog" {
+  count = var.enable_datadog ? 1 : 0
+
+  metadata {
+    name      = "datadog-credentials"
+    namespace = kubernetes_namespace_v1.monitoring.metadata[0].name
+  }
+
+  data = {
+    api-key = var.datadog_api_key
+  }
+
+  type = "Opaque"
+
+  lifecycle {
+    precondition {
+      condition     = length(trimspace(var.datadog_api_key)) > 0
+      error_message = "datadog_api_key deve ser informada quando enable_datadog for true."
+    }
+  }
+}
+
 resource "kubernetes_storage_class_v1" "gp3" {
   count = var.persistence_enabled ? 1 : 0
 
@@ -308,6 +330,18 @@ resource "helm_release" "otel_collector" {
         name = "otelcol-contrib"
       }
 
+      extraEnvs = var.enable_datadog ? [
+        {
+          name = "DD_API_KEY"
+          valueFrom = {
+            secretKeyRef = {
+              name = kubernetes_secret_v1.datadog[0].metadata[0].name
+              key  = "api-key"
+            }
+          }
+        }
+      ] : []
+
       service = {
         enabled = true
         type    = "ClusterIP"
@@ -394,7 +428,11 @@ resource "helm_release" "otel_collector" {
           batch = {}
         }
 
-        exporters = {
+        connectors = var.enable_datadog ? {
+          "datadog/connector" = {}
+        } : {}
+
+        exporters = merge({
           "otlphttp/loki" = {
             endpoint = "http://${var.loki_release_name}-gateway.${var.namespace}.svc.cluster.local/otlp"
             sending_queue = merge({
@@ -413,7 +451,19 @@ resource "helm_release" "otel_collector" {
           debug = {
             verbosity = "basic"
           }
-        }
+          }, var.enable_datadog ? {
+          "datadog/exporter" = {
+            api = {
+              key  = "$${env:DD_API_KEY}"
+              site = var.datadog_site
+            }
+            sending_queue = {
+              batch = {
+                flush_timeout = "10s"
+              }
+            }
+          }
+        } : {})
 
         service = {
           extensions = var.persistence_enabled ? ["health_check", "file_storage"] : ["health_check"]
@@ -422,17 +472,17 @@ resource "helm_release" "otel_collector" {
             logs = {
               receivers  = ["otlp"]
               processors = ["memory_limiter", "batch"]
-              exporters  = ["otlphttp/loki", "debug"]
+              exporters  = concat(["otlphttp/loki", "debug"], var.enable_datadog ? ["datadog/exporter"] : [])
             }
             metrics = {
-              receivers  = ["otlp"]
+              receivers  = concat(["otlp"], var.enable_datadog ? ["datadog/connector"] : [])
               processors = ["memory_limiter", "batch"]
-              exporters  = ["prometheus", "debug"]
+              exporters  = concat(["prometheus", "debug"], var.enable_datadog ? ["datadog/exporter"] : [])
             }
             traces = {
               receivers  = ["otlp"]
               processors = ["memory_limiter", "batch"]
-              exporters  = ["debug"]
+              exporters  = concat(["debug"], var.enable_datadog ? ["datadog/connector", "datadog/exporter"] : [])
             }
           }
         }
@@ -440,7 +490,10 @@ resource "helm_release" "otel_collector" {
     })
   ]
 
-  depends_on = [helm_release.loki]
+  depends_on = [
+    helm_release.loki,
+    kubernetes_secret_v1.datadog
+  ]
 }
 
 data "kubernetes_service_v1" "grafana" {

@@ -3,6 +3,10 @@ kind: Deployment
 metadata:
   name: ngo-service
   namespace: fiap-microservices
+  labels:
+    tags.datadoghq.com/env: fiap-lab5
+    tags.datadoghq.com/service: ngo-service
+    tags.datadoghq.com/version: "1.0.0"
 spec:
   replicas: 1
   selector:
@@ -12,6 +16,9 @@ spec:
     metadata:
       labels:
         app: ngo-service
+        tags.datadoghq.com/env: fiap-lab5
+        tags.datadoghq.com/service: ngo-service
+        tags.datadoghq.com/version: "1.0.0"
     spec:
       containers:
         - name: ngo-service
@@ -26,6 +33,8 @@ spec:
               value: "8081"
             - name: OTEL_SERVICE_NAME
               value: "ngo-service"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "deployment.environment.name=fiap-lab5,service.version=1.0.0,service.namespace=solidarytech"
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: "http://otel-collector.monitoring.svc.cluster.local:4318"
             - name: OTEL_EXPORTER_OTLP_PROTOCOL

@@ -138,6 +138,30 @@ variable "otel_collector_persistence_size" {
   default     = "5Gi"
 }
 
+variable "enable_datadog" {
+  description = "Habilita o envio de metricas, traces e logs do OpenTelemetry Collector para o Datadog."
+  type        = bool
+  default     = false
+}
+
+variable "datadog_site" {
+  description = "Site regional da organizacao Datadog, por exemplo datadoghq.com ou datadoghq.eu."
+  type        = string
+  default     = "datadoghq.com"
+
+  validation {
+    condition     = length(trimspace(var.datadog_site)) > 0
+    error_message = "datadog_site nao pode ser vazio."
+  }
+}
+
+variable "datadog_api_key" {
+  description = "API key de ingestao do Datadog. Informe por TF_VAR_datadog_api_key e nao grave no Git."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "timeout" {
   description = "Timeout das instalacoes Helm em segundos."
   type        = number

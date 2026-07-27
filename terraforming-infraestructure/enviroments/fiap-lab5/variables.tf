@@ -53,6 +53,12 @@ variable "enable_ebs_persistence" {
   default     = false
 }
 
+variable "enable_cluster_autoscaler" {
+  description = "Habilita o Cluster Autoscaler e os recursos IAM e Pod Identity associados."
+  type        = bool
+  default     = false
+}
+
 variable "project_name" {
   description = "Nome do projeto usado na identificacao e nas tags dos recursos."
   type        = string
@@ -133,4 +139,23 @@ variable "grafana_admin_password" {
   description = "Senha inicial do administrador do Grafana."
   type        = string
   sensitive   = true
+}
+
+variable "enable_datadog" {
+  description = "Habilita a exportacao da telemetria do ambiente para o Datadog."
+  type        = bool
+  default     = false
+}
+
+variable "datadog_site" {
+  description = "Site regional da organizacao Datadog."
+  type        = string
+  default     = "datadoghq.com"
+}
+
+variable "datadog_api_key" {
+  description = "API key de ingestao do Datadog. Informe por TF_VAR_datadog_api_key."
+  type        = string
+  sensitive   = true
+  default     = ""
 }
