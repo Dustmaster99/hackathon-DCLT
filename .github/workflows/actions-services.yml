@@ -375,7 +375,7 @@ jobs:
 
       - name: Update all GitOps manifests
         run: |
-          REGISTRY="245177908729.dkr.ecr.us-east-1.amazonaws.com"
+          REGISTRY="857584016374.dkr.ecr.us-east-1.amazonaws.com"
 
           sed -i "s#image: .*ngo-service:.*#image: ${REGISTRY}/solidarytech/ngo-service:${IMAGE_TAG}#g" "Manifestos-kubernet-service/ngo-service-manifest/ngo-service-deploy.yaml"
           sed -i "s#image: .*donation-service:.*#image: ${REGISTRY}/solidarytech/donation-service:${IMAGE_TAG}#g" "Manifestos-kubernet-service/donation-service-manifest/donation-service-deploy.yaml"
