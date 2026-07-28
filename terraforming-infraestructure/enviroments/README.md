@@ -10,6 +10,7 @@ em `fiap-lab5` e provisiona:
 - namespaces, Secrets e ingress-nginx;
 - Argo CD e suas Applications;
 - Grafana, Loki, Prometheus e OpenTelemetry Collector;
+- Velero e bucket S3 cross-region para backup e Disaster Recovery;
 - volumes persistentes EBS `gp3` para observabilidade.
 
 ## Pré-requisitos
@@ -90,7 +91,8 @@ $modules = @(
   "cluster-manifests",
   "argocd",
   "argocd-applications",
-  "observability"
+  "observability",
+  "velero"
 )
 
 foreach ($module in $modules) {
@@ -329,7 +331,120 @@ terraform apply -target="module.argocd_applications"
 O Argo CD passa a sincronizar os Deployments, Services e HPAs presentes em
 `Manifestos-kubernet-service`.
 
-### 11. Reconciliação completa
+### 11. Velero — backup e Disaster Recovery
+
+O módulo `velero` cria:
+
+- bucket S3 de backup em uma região diferente do cluster;
+- versionamento, criptografia AES-256 e bloqueio de acesso público;
+- namespace e Secret de credenciais do Velero;
+- Helm release oficial do Velero;
+- plugin AWS e Node Agent;
+- `BackupStorageLocation`;
+- agendamento de backup dos namespaces críticos a cada 15 minutos.
+
+No AWS Academy, o módulo não cria IAM User nem IAM Role. Ele usa as mesmas
+credenciais temporárias configuradas no `terraform.tfvars`. Quando a sessão do
+laboratório expirar, as credenciais precisam ser atualizadas e reaplicadas.
+
+Antes de executar, configure:
+
+```hcl
+enable_velero            = true
+velero_backup_region     = "us-west-2"
+velero_backup_schedule   = "*/15 * * * *"
+velero_backup_ttl_hours  = 48
+```
+
+O cluster está em `us-east-1` e o bucket de backup será criado em `us-west-2`.
+Se o AWS Academy não permitir essa região, selecione outra região liberada pelo
+laboratório. Para manter proteção cross-region, não use a mesma região do
+cluster.
+
+Planeje e aplique o módulo:
+
+```powershell
+terraform plan `
+  -target="module.velero" `
+  -out="velero.tfplan"
+
+terraform show "velero.tfplan"
+terraform apply "velero.tfplan"
+```
+
+Confirme a instalação:
+
+```powershell
+kubectl get pods -n velero
+kubectl get backupstoragelocations -n velero
+kubectl get schedules -n velero
+terraform output velero_backup_bucket
+```
+
+O `BackupStorageLocation` chamado `default` deve ficar com status `Available`.
+O schedule `solidarytech-critical` deve estar habilitado.
+
+Crie um backup manual para produzir a primeira evidência:
+
+```powershell
+$backupName = "solidarytech-manual-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+
+@"
+apiVersion: velero.io/v1
+kind: Backup
+metadata:
+  name: $backupName
+  namespace: velero
+spec:
+  includedNamespaces:
+    - fiap-microservices
+    - argocd
+    - ingress-nginx
+    - monitoring
+  storageLocation: default
+  snapshotVolumes: false
+  defaultVolumesToFsBackup: true
+  ttl: 48h0m0s
+"@ | kubectl apply -f -
+
+kubectl get backup -n velero $backupName
+kubectl describe backup -n velero $backupName
+```
+
+O backup deve chegar a `Completed`. Caso fique `PartiallyFailed`, consulte:
+
+```powershell
+kubectl logs deployment/velero -n velero --tail=200
+kubectl get podvolumebackups -n velero
+```
+
+#### Limitação do PostgreSQL atual
+
+O volume do PostgreSQL usa `hostPath`. O File System Backup do Velero não
+suporta volumes `hostPath`; portanto, o Velero protege os manifestos, mas não
+protege os dados atuais desse volume.
+
+Para cumprir o RPO de 15 minutos das doações, implemente também `pg_dump`
+periódico para o S3 ou migre o banco para um PVC EBS/CSI compatível. Não
+considere o RPO comprovado até executar e validar uma restauração dos dados.
+
+#### Renovação das credenciais do AWS Academy
+
+Após substituir as três credenciais no `terraform.tfvars`:
+
+```powershell
+terraform apply -target="module.velero"
+
+kubectl rollout restart deployment/velero -n velero
+kubectl rollout restart daemonset/velero-node-agent -n velero
+kubectl rollout status deployment/velero -n velero
+kubectl get backupstoragelocations -n velero
+```
+
+O procedimento completo de backup, restauração e coleta de evidências está em
+[`VELERO.md`](../../VELERO.md).
+
+### 12. Reconciliação completa
 
 Finalize obrigatoriamente sem `-target`:
 
@@ -387,6 +502,8 @@ kubectl get ingress -A
 kubectl get pvc -n monitoring
 kubectl get applications -n argocd
 kubectl get deployment cluster-autoscaler -n kube-system
+kubectl get backupstoragelocations -n velero
+kubectl get schedules -n velero
 ```
 
 URLs externas:
@@ -394,6 +511,7 @@ URLs externas:
 ```powershell
 terraform output argocd_external_url
 terraform output grafana_external_url
+terraform output velero_backup_bucket
 ```
 
 ## Fluxo normal após o bootstrap

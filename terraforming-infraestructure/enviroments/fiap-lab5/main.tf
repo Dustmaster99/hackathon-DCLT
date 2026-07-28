@@ -254,3 +254,38 @@ module "observability" {
 
   depends_on = [module.cluster_manifests]
 }
+
+module "velero" {
+  count  = var.enable_velero ? 1 : 0
+  source = "../../modules/velero"
+
+  providers = {
+    aws        = aws.dr
+    kubernetes = kubernetes
+    helm       = helm
+  }
+
+  project_name  = var.project_name
+  backup_region = var.velero_backup_region
+  bucket_name   = var.velero_bucket_name
+
+  chart_version      = var.velero_chart_version
+  aws_plugin_version = var.velero_aws_plugin_version
+
+  aws_access_key_id     = var.aws_access_key_id_secret
+  aws_secret_access_key = var.aws_secret_access_key_secret
+  aws_session_token     = var.aws_session_token_secret
+
+  backup_schedule     = var.velero_backup_schedule
+  backup_ttl_hours    = var.velero_backup_ttl_hours
+  included_namespaces = var.velero_included_namespaces
+
+  tags = local.common_tags
+
+  depends_on = [
+    module.eks,
+    module.cluster_manifests,
+    module.argocd,
+    module.observability
+  ]
+}

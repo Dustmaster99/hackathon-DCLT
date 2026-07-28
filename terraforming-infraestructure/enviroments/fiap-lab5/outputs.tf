@@ -37,3 +37,13 @@ output "observability_storage_class" {
   description = "StorageClass gp3 dos volumes persistentes de observabilidade."
   value       = module.observability.storage_class_name
 }
+
+output "velero_backup_bucket" {
+  description = "Bucket S3 cross-region usado pelos backups do Velero."
+  value       = var.enable_velero ? module.velero[0].bucket_name : null
+}
+
+output "velero_namespace" {
+  description = "Namespace Kubernetes do Velero."
+  value       = var.enable_velero ? module.velero[0].namespace : null
+}

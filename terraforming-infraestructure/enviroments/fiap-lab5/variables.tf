@@ -159,3 +159,57 @@ variable "datadog_api_key" {
   sensitive   = true
   default     = ""
 }
+
+variable "enable_velero" {
+  description = "Habilita o bucket S3 cross-region e a instalacao do Velero sem criar IAM Role."
+  type        = bool
+  default     = false
+}
+
+variable "velero_backup_region" {
+  description = "Regiao do bucket S3 usado para Disaster Recovery."
+  type        = string
+  default     = "us-west-2"
+}
+
+variable "velero_bucket_name" {
+  description = "Nome opcional do bucket Velero. Quando nulo, um nome unico e gerado."
+  type        = string
+  default     = null
+  nullable    = true
+}
+
+variable "velero_chart_version" {
+  description = "Versao do Helm chart oficial do Velero."
+  type        = string
+  default     = "12.1.0"
+}
+
+variable "velero_aws_plugin_version" {
+  description = "Versao do plugin AWS para o Velero."
+  type        = string
+  default     = "v1.13.1"
+}
+
+variable "velero_backup_schedule" {
+  description = "Agenda Cron UTC do backup dos namespaces criticos."
+  type        = string
+  default     = "*/15 * * * *"
+}
+
+variable "velero_backup_ttl_hours" {
+  description = "Retencao dos backups do Velero em horas."
+  type        = number
+  default     = 48
+}
+
+variable "velero_included_namespaces" {
+  description = "Namespaces incluidos no backup agendado do Velero."
+  type        = list(string)
+  default = [
+    "fiap-microservices",
+    "argocd",
+    "ingress-nginx",
+    "monitoring"
+  ]
+}

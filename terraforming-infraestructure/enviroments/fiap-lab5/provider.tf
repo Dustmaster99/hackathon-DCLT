@@ -28,6 +28,19 @@ provider "aws" {
   }
 }
 
+provider "aws" {
+  alias      = "dr"
+  region     = var.velero_backup_region
+  profile    = var.aws_profile
+  access_key = var.aws_profile == null ? var.aws_access_key_id_secret : null
+  secret_key = var.aws_profile == null ? var.aws_secret_access_key_secret : null
+  token      = var.aws_profile == null ? var.aws_session_token_secret : null
+
+  default_tags {
+    tags = local.common_tags
+  }
+}
+
 data "aws_eks_cluster_auth" "this" {
   name = module.eks.cluster_name
 }
