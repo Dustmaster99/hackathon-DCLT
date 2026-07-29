@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: volunteer-service
-          image: 857584016374.dkr.ecr.us-east-1.amazonaws.com/solidarytech/volunteer-service:f2dda33
+          image: 857584016374.dkr.ecr.us-east-1.amazonaws.com/solidarytech/volunteer-service:f685bd6
           ports:
             - containerPort: 8083
           envFrom:
