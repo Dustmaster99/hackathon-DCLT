@@ -21,6 +21,10 @@ resource "aws_s3_bucket" "backups" {
     Name    = local.bucket_name
     Purpose = "VeleroDisasterRecovery"
   })
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "backups" {
